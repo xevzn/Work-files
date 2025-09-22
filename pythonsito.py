@@ -11,3 +11,5 @@ a = int(input("Dame el primer numero: "))
 b = int(input("Dame el segundo numero: "))
 respuesta = a + b 
 print(respuesta)
+
+print(f"La resta de a y b es: {a-b}")
