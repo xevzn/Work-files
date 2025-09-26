@@ -30,7 +30,6 @@ def get_serial(ser):
 # 🔹 Configuración de dispositivo
 def configure_device(port, hostname, user, password, domain):
     try:
-        port = "COM5"
         ser = serial.Serial(port, baudrate=9600, timeout=1)
         time.sleep(2)
         print(f"\n🔗 Conectado al dispositivo en {port} ({hostname})")
@@ -40,13 +39,13 @@ def configure_device(port, hostname, user, password, domain):
         if not serial_num:
             print("⚠ No se pudo obtener el número de serie. Saltando configuración.")
             ser.close()
-            return
+            return False  # Devuelve False si se saltó
 
-        # Verificar si la serie coincide con alguna del CSV
-        if hostname[1:] != serial_num[:6]:  # hostname = primera letra device + primeros 6 de serie CSV
+        # Verificar coincidencia completa de serie
+        if hostname[1:] != serial_num:
             print(f"⚠ La serie del dispositivo ({serial_num}) no coincide con la del CSV ({hostname[1:]}). Saltando configuración.")
             ser.close()
-            return
+            return False  # Devuelve False si se saltó
 
         # Enviar configuración básica
         send_command(ser, "enable")
@@ -65,11 +64,12 @@ def configure_device(port, hostname, user, password, domain):
         send_command(ser, "write memory", delay=2)
 
         print(f"✅ Configuración aplicada correctamente en {hostname}.")
-
         ser.close()
+        return True  # Devuelve True si se configuró correctamente
 
     except Exception as e:
         print(f"❌ Error al configurar el dispositivo {hostname}: {e}")
+        return False
 
 # 🔹 Main
 if __name__ == "__main__":
@@ -77,11 +77,11 @@ if __name__ == "__main__":
     print("\n📂 Dispositivos encontrados en el archivo:")
     print(df)
 
-    # Crear lista de hostnames a partir de Device + Serie
+    # Crear lista de hostnames a partir de Device + Serie completa
     Hostnames = []
     for d, s in zip(df['Device'], df['Serie']):
         initial_d = str(d).strip()[0]
-        initial_s = str(s).strip()[:6]
+        initial_s = str(s).strip()  # toda la serie
         device_name = initial_d + initial_s
         Hostnames.append(device_name)
 
@@ -95,11 +95,25 @@ if __name__ == "__main__":
         print(item)
     input("Presione ENTER para continuar...")
 
+    # Registros de éxito/fallo
+    configured_devices = []
+    skipped_devices = []
+
     # Configurar dispositivos uno por uno
     for idx, (p, h, u, pas, dom) in enumerate(list_device, start=1):
         clear_console()
         print(f"\n➡️ Conecte ahora el dispositivo {idx}: {h} en el puerto {p}")
         input("Presione ENTER cuando el dispositivo esté conectado...")
-        configure_device(p, h, u, pas, dom)
+        success = configure_device(p, h, u, pas, dom)
+        if success:
+            configured_devices.append(h)
+        else:
+            skipped_devices.append(h)
         print("=================================================")
         input("Presione ENTER para continuar...")
+
+    # Mostrar resumen final
+    clear_console()
+    print("📊 Resumen de la configuración:")
+    print(f"✅ Dispositivos configurados ({len(configured_devices)}): {configured_devices}")
+    print(f"⚠ Dispositivos saltados ({len(skipped_devices)}): {skipped_devices}")
