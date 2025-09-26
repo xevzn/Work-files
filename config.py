@@ -30,6 +30,7 @@ def get_serial(ser):
 # 🔹 Configuración de dispositivo
 def configure_device(port, hostname, user, password, domain):
     try:
+        port = "COM5"
         ser = serial.Serial(port, baudrate=9600, timeout=1)
         time.sleep(2)
         print(f"\n🔗 Conectado al dispositivo en {port} ({hostname})")
@@ -41,8 +42,8 @@ def configure_device(port, hostname, user, password, domain):
             ser.close()
             return
 
-        # Verificar coincidencia de serie
-        if hostname[1:] != serial_num[:6]:
+        # Verificar si la serie coincide con alguna del CSV
+        if hostname[1:] != serial_num[:6]:  # hostname = primera letra device + primeros 6 de serie CSV
             print(f"⚠ La serie del dispositivo ({serial_num}) no coincide con la del CSV ({hostname[1:]}). Saltando configuración.")
             ser.close()
             return
@@ -64,38 +65,19 @@ def configure_device(port, hostname, user, password, domain):
         send_command(ser, "write memory", delay=2)
 
         print(f"✅ Configuración aplicada correctamente en {hostname}.")
+
         ser.close()
 
     except Exception as e:
         print(f"❌ Error al configurar el dispositivo {hostname}: {e}")
 
-# 🔹 Función para enviar comandos manuales
-def command_mode():
-    port = input("Ingrese el puerto serial (ej. COM5): ")
-    try:
-        ser = serial.Serial(port, baudrate=9600, timeout=1)
-        time.sleep(2)
-        print(f"\n🔗 Conectado al dispositivo en {port}")
-        send_command(ser, "terminal length 0")  # para ver todo el output
-
-        while True:
-            cmd = input("Ingrese comando (o 'exit' para salir): ")
-            if cmd.lower() in ["exit", "salir", "quit"]:
-                break
-            output = send_command(ser, cmd, delay=1)
-            print("📜 Salida del dispositivo:\n", output)
-
-        ser.close()
-    except Exception as e:
-        print(f"❌ Error: {e}")
-
-# 🔹 Función para configuración inicial desde CSV
-def config_mode():
+# 🔹 Main
+if __name__ == "__main__":
     df = pd.read_csv("C:\\Users\\Dani\\OneDrive\\Escritorio\\Clases Unipoli\\Cuatri 4\\Programacion de Redes\\Apuntes\\VENV\\Data.csv")
     print("\n📂 Dispositivos encontrados en el archivo:")
     print(df)
 
-    # Crear lista de hostnames
+    # Crear lista de hostnames a partir de Device + Serie
     Hostnames = []
     for d, s in zip(df['Device'], df['Serie']):
         initial_d = str(d).strip()[0]
@@ -103,12 +85,17 @@ def config_mode():
         device_name = initial_d + initial_s
         Hostnames.append(device_name)
 
+    # Lista de configuraciones
     list_device = []
     for p, u, pas, dom, h in zip(df['Port'], df['User'], df['Password'], df['Ip-domain'], Hostnames):
         list_device.append((p, h, u, pas, dom))
 
-    input("Presione ENTER para continuar con la configuración...")
+    print("\n📋 Lista de dispositivos y sus configuraciones:")
+    for item in list_device:
+        print(item)
+    input("Presione ENTER para continuar...")
 
+    # Configurar dispositivos uno por uno
     for idx, (p, h, u, pas, dom) in enumerate(list_device, start=1):
         clear_console()
         print(f"\n➡️ Conecte ahora el dispositivo {idx}: {h} en el puerto {p}")
@@ -116,27 +103,3 @@ def config_mode():
         configure_device(p, h, u, pas, dom)
         print("=================================================")
         input("Presione ENTER para continuar...")
-
-# 🔹 Menú principal
-def main_menu():
-    while True:
-        clear_console()
-        print("=== Menú principal ===")
-        print("1️⃣  Enviar comandos manuales")
-        print("2️⃣  Aplicar configuración inicial desde CSV")
-        print("3️⃣  Salir")
-        choice = input("Seleccione una opción: ")
-
-        if choice == "1":
-            command_mode()
-        elif choice == "2":
-            config_mode()
-        elif choice == "3":
-            print("Saliendo del programa...")
-            break
-        else:
-            print("Opción inválida. Intente de nuevo.")
-            time.sleep(1)
-
-if __name__ == "__main__":
-    main_menu()
