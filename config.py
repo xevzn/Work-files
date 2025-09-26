@@ -117,3 +117,4 @@ if __name__ == "__main__":
     print("📊 Resumen de la configuración:")
     print(f"✅ Dispositivos configurados ({len(configured_devices)}): {configured_devices}")
     print(f"⚠ Dispositivos saltados ({len(skipped_devices)}): {skipped_devices}")
+
