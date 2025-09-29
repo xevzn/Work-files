@@ -1,2 +1,3 @@
 ﻿Serie,Port,Device,User,Password,Ip-domain
-FTX1537827U,COM5,Router1,Cisco,Cisco,cisco.local
+FTX144582PH,COM9,R-FTX144582PH,Cisco,Cisco,cisco.local
+FTX144ASFRW,COM9,R-FTX144582AS,Cisco,Cisco,cisco.local

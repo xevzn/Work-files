@@ -8,7 +8,7 @@ os.system("cls")
 
 # Configura el puerto serial
 ser = serial.Serial(
-    port="COM5",   # Cambia si usas otro puerto
+    port="COM9",   # Cambia si usas otro puerto
     baudrate=9600,
     timeout=1
 )
@@ -20,7 +20,7 @@ def send_command(command, wait=1):
     return output
 
 try:
-    print("🔗 Conectado al dispositivo en COM5")
+    print("🔗 Conectado al dispositivo en COM")
 
     # Hacemos que el router muestre todo sin cortar
     send_command("terminal length 0")
