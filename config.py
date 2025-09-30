@@ -5,7 +5,6 @@ import pandas as pd
 import os
 import re
 
-
 # 🔹 Limpiar pantalla según el SO
 def clear_console():
     if os.name == 'nt':
@@ -13,13 +12,13 @@ def clear_console():
     else:
         os.system('clear')
 
-
 # 🔹 Mostrar puertos disponibles
 def list_ports():
     ports = [p.device for p in serial.tools.list_ports.comports()]
-    print(f"🔌 Puertos disponibles: {ports}")
+    print("\n" + "="*50)
+    print(f"🔌 Puertos disponibles: {', '.join(ports) if ports else 'Ninguno encontrado'}")
+    print("="*50)
     return ports
-
 
 # 🔹 Intentar abrir el puerto con reintentos
 def open_serial(port, retries=3, delay=3):
@@ -36,7 +35,6 @@ def open_serial(port, retries=3, delay=3):
             time.sleep(delay)
     return None
 
-
 # 🔹 Enviar comando al router
 def send_command(ser, command, delay=1):
     try:
@@ -50,7 +48,6 @@ def send_command(ser, command, delay=1):
         print(f"❌ Error al enviar comando '{command}': {e}")
         return ""
 
-
 # 🔹 Obtener número de serie desde "show inventory"
 def get_serial(ser):
     send_command(ser, "terminal length 0")  # evitar paginación
@@ -59,7 +56,6 @@ def get_serial(ser):
     if match:
         return match.group(1)
     return None
-
 
 # 🔹 Configuración de dispositivo
 def configure_device(port, hostname, user, password, domain):
@@ -77,6 +73,8 @@ def configure_device(port, hostname, user, password, domain):
             print("⚠ No se pudo obtener el número de serie. Saltando configuración.")
             ser.close()
             return False
+        else: 
+            print(f"🔎 Número de serie encontrado: {serial_num}")
 
         # Verificar coincidencia completa de serie
         if hostname[1:] != serial_num:
@@ -108,12 +106,15 @@ def configure_device(port, hostname, user, password, domain):
         print(f"❌ Error al configurar el dispositivo {hostname}: {e}")
         return False
 
-
 # 🔹 Main
 if __name__ == "__main__":
+    clear_console()
+    print("="*60)
+    print("📂 Leyendo archivo de dispositivos...")
+    print("="*60)
     df = pd.read_csv("C:\\Users\\Dani\\OneDrive\\Escritorio\\Clases Unipoli\\Cuatri 4\\Programacion de Redes\\Apuntes\\VENV\\Data.csv")
-    print("\n📂 Dispositivos encontrados en el archivo:")
-    print(df)
+    print("\n📋 Dispositivos encontrados en el archivo:")
+    print(df.to_string(index=False))
 
     # Crear lista de hostnames a partir de Device + Serie completa
     Hostnames = []
@@ -128,13 +129,16 @@ if __name__ == "__main__":
     for p, u, pas, dom, h in zip(df['Port'], df['User'], df['Password'], df['Ip-domain'], Hostnames):
         list_device.append((p, h, u, pas, dom))
 
-    print("\n📋 Lista de dispositivos y sus configuraciones:")
-    for item in list_device:
-        print(item)
-    input("Presione ENTER para continuar...")
+    print("\n" + "="*60)
+    print("📋 Lista de dispositivos y sus configuraciones:")
+    print("="*60)
+    for idx, item in enumerate(list_device, 1):
+        print(f"{idx}. Puerto: {item[0]} | Hostname: {item[1]} | Usuario: {item[2]} | Dominio: {item[4]}")
+    input("\nPresione ENTER para continuar...")
 
     # Mostrar puertos disponibles antes de iniciar
     list_ports()
+    input("\nVerifique los puertos disponibles. Presione ENTER para iniciar la configuración...")
 
     # Registros de éxito/fallo
     configured_devices = []
@@ -143,8 +147,12 @@ if __name__ == "__main__":
     # Configurar dispositivos uno por uno
     for idx, (p, h, u, pas, dom) in enumerate(list_device, start=1):
         clear_console()
+        print("="*60)
+        print(f"➡️  Configuración del dispositivo {idx}/{len(list_device)}: {h}")
+        print("="*60)
         list_ports()
-        print(f"\n➡️ Conecte ahora el dispositivo {idx}: {h} en el puerto {p}")
+        print(f"\n🔗 Por favor, conecte el dispositivo '{h}' al puerto '{p}'.")
+        print("🔄 Si es necesario, desconecte y vuelva a conectar la conexión serial.")
         input("Presione ENTER cuando el dispositivo esté conectado...")
 
         success = configure_device(p, h, u, pas, dom)
@@ -153,11 +161,18 @@ if __name__ == "__main__":
         else:
             skipped_devices.append(h)
 
-        print("=================================================")
-        input("Presione ENTER para continuar...")
+        print("\n" + "-"*60)
+        input("Presione ENTER para continuar con el siguiente dispositivo...")
 
     # Mostrar resumen final
     clear_console()
+    print("="*60)
     print("📊 Resumen de la configuración:")
-    print(f"✅ Dispositivos configurados ({len(configured_devices)}): {configured_devices}")
-    print(f"⚠ Dispositivos saltados ({len(skipped_devices)}): {skipped_devices}")
+    print("="*60)
+    print(f"✅ Dispositivos configurados ({len(configured_devices)}):")
+    for d in configured_devices:
+        print(f"   - {d}")
+    print(f"\n⚠ Dispositivos saltados ({len(skipped_devices)}):")
+    for d in skipped_devices:
+        print(f"   - {d}")
+    print("\nProceso finalizado. Puede cerrar la ventana.")
