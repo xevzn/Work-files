@@ -104,8 +104,7 @@ def guardar_status(ser):
     for i in interfaces:
         print("  -", i)
 
-# 🔹 Configuración de dispositivo
-def configure_device(port, hostname, user, password, domain):
+def configure_device(port, hostname, user, password, domain, expected_serial):
     try:
         ser = open_serial(port)
         if not ser:
@@ -114,13 +113,18 @@ def configure_device(port, hostname, user, password, domain):
 
         print(f"\n🔗 Conectado al dispositivo en {port} ({hostname})")
 
-        # Obtener número de serie
+        # Detectar número de serie real
         serial_num = get_serial(ser)
-        print(f"🔎 Número de serie: {serial_num}")
+        print(f"🔎 Número de serie detectado: {serial_num}")
 
-        # Aquí irían interfaces y guardado en CSV (omitido porque no pediste modificar opción 2)
+        # Validar con el CSV
+        if serial_num != expected_serial:
+            print(f"⚠ El número de serie no coincide con el CSV ({expected_serial}).")
+            print("⏭ No se aplicará configuración a este dispositivo.")
+            ser.close()
+            return False
 
-        # Configuración SSH básica
+        # Si coincide → aplicar configuración
         send_command(ser, "enable")
         send_command(ser, "configure terminal")
         send_command(ser, f"hostname {hostname}")
@@ -143,6 +147,7 @@ def configure_device(port, hostname, user, password, domain):
     except Exception as e:
         print(f"❌ Error en {hostname}: {e}")
         return False
+
 
 # 🔹 Modo manual
 def manual_command_mode():
@@ -172,15 +177,16 @@ def manual_command_mode():
 
 # 🔹 Modo configuración inicial
 def initial_config_mode(list_device):
-    for idx, (p, h, u, pas, dom) in enumerate(list_device, start=1):
+    for idx, (p, h, u, pas, dom, expected_serial) in enumerate(list_device, start=1):
         clear_console()
         print("="*60)
         print(f"➡️ Configuración del dispositivo {idx}/{len(list_device)}: {h}")
         print("="*60)
         list_ports()
         input(f"\n🔗 Conecte '{h}' al puerto '{p}' y presione ENTER...")
-        configure_device(p, h, u, pas, dom)
+        configure_device(p, h, u, pas, dom, expected_serial)
         input("ENTER para continuar con el siguiente dispositivo...")
+
 
 # 🔹 Modo estado de interfaces (MODIFICADO para usar guardar_status)
 def interface_status_mode(list_device):
@@ -262,6 +268,11 @@ if __name__ == "__main__":
     Hostnames = []  
     for d, s in zip(df['Device'], df['Serie']):
         Hostnames.append(str(d).strip()[0] + str(s).strip())
-    list_device = [(p,h,u,pas,dom) for p,h,u,pas,dom in zip(df['Port'], Hostnames, df['User'], df['Password'], df['Ip-domain'])]
+    list_device = [
+    (p, h, u, pas, dom, serie)
+    for p, h, u, pas, dom, serie in zip(
+        df['Port'], Hostnames, df['User'], df['Password'], df['Ip-domain'], df['Serie']
+    )
+    ]
 
     main_fsm(list_device)
