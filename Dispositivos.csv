@@ -1,2 +1,2 @@
-Serie,Interfaces
-FTX1050W1PA,FastEthernet0/0:down/down; FastEthernet0/1:down/down
+Serie,Int1 Nombre,Int1 IP,Int1 Protocolo,Int1 Estado,Int2 Nombre,Int2 IP,Int2 Protocolo,Int2 Estado,Int3 Nombre,Int3 IP,Int3 Protocolo,Int3 Estado,Int4 Nombre,Int4 IP,Int4 Protocolo,Int4 Estado
+FJC2047A07M,GigabitEthernet0/0,192.168.20.1,up,up,GigabitEthernet0/1,unassigned,down,down,FastEthernet0/2/0,unassigned,down,down,FastEthernet0/2/1,unassigned,down,down

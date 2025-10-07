@@ -6,7 +6,7 @@ import os
 import csv
 import sys
 import textfsm
-from textFSM import FSM
+from textFSMfunct import FSM
 
 # 🔹 Limpiar pantalla
 def clear_console():
@@ -77,7 +77,7 @@ def guardar_status(ser):
             serie = linea.split("SN:")[-1].strip()
             break
 
-    # Obtener interfaces Ethernet
+    # Obtener interfaces Ethernet con IP
     salida_interfaces = send_command(ser, "show ip interface brief", delay=2)
     interfaces = []
     for linea in salida_interfaces.splitlines():
@@ -85,24 +85,80 @@ def guardar_status(ser):
             partes = linea.split()
             if len(partes) >= 6:
                 nombre = partes[0]
+                ip = partes[1]
                 estado = partes[-2]
                 protocolo = partes[-1]
-                interfaces.append(f"{nombre}:{estado}/{protocolo}")
+                interfaces.append({
+                    "nombre": nombre,
+                    "ip": ip,
+                    "estado": estado,
+                    "protocolo": protocolo
+                })
 
-    # Guardar en CSV una línea por dispositivo
     archivo = "Dispositivos.csv"
-    existe = os.path.isfile(archivo)
-    with open(archivo, "a", newline="") as f:
+    # Leer datos existentes
+    datos_existentes = []
+    if os.path.isfile(archivo):
+        with open(archivo, "r", newline="") as f:
+            reader = csv.reader(f)
+            encabezado = next(reader, None)
+            for fila in reader:
+                datos_existentes.append(fila)
+    else:
+        encabezado = None
+
+    # Construir nueva fila para este dispositivo
+    nueva_fila = [serie]
+    for idx, intf in enumerate(interfaces, start=1):
+        nueva_fila.extend([
+            intf["nombre"],
+            intf["ip"],
+            intf["protocolo"],
+            intf["estado"]
+        ])
+
+    # Construir encabezado si no existe
+    if not encabezado:
+        encabezado = ["Serie"]
+        for idx in range(1, len(interfaces) + 1):
+            encabezado.extend([
+                f"Int{idx} Nombre",
+                f"Int{idx} IP",
+                f"Int{idx} Protocolo",
+                f"Int{idx} Estado"
+            ])
+
+    # Buscar si ya existe una fila igual
+    fila_existente_idx = None
+    for i, fila in enumerate(datos_existentes):
+        if fila and fila[0] == serie:
+            if fila == nueva_fila:
+                print("ℹ️ La información ya está registrada y no ha cambiado.")
+                return
+            else:
+                fila_existente_idx = i
+                break
+
+    # Actualizar o agregar la fila
+    if fila_existente_idx is not None:
+        datos_existentes[fila_existente_idx] = nueva_fila
+        print("🔄 Cambios detectados, actualizando información en el CSV...")
+    else:
+        datos_existentes.append(nueva_fila)
+        print("✅ Nueva información agregada al CSV...")
+
+    # Guardar todo el archivo
+    with open(archivo, "w", newline="") as f:
         writer = csv.writer(f)
-        if not existe:
-            writer.writerow(["Serie", "Interfaces"])
-        writer.writerow([serie, "; ".join(interfaces)])
+        writer.writerow(encabezado)
+        for fila in datos_existentes:
+            writer.writerow(fila)
 
     print(f"\n✅ Información guardada en {archivo}")
     print(f"Serie detectada: {serie}")
     print("Interfaces encontradas:")
-    for i in interfaces:
-        print("  -", i)
+    for intf in interfaces:
+        print(f"  - {intf['nombre']} | IP: {intf['ip']} | Protocolo: {intf['protocolo']} | Estado: {intf['estado']}")
 
 def configure_device(port, hostname, user, password, domain, expected_serial):
     try:
